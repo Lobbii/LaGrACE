@@ -1,0 +1,21 @@
+Package: LaGrACE
+Title: An Implementation of the LaGrACE Method for estimation of gene program dysregulation 
+Version: 0.0.0.9000
+Authors@R: 
+    c(person("Minxue","Jia",email="mij51@pitt.edu",role=c("cre","aut")),
+    person("Panayiotis","Benos",email="benos@pitt.edu",role="aut"))
+Description: Human diseases often arise from a range of heterogeneous alterations in gene regulatory network, contributing to etiologic heterogeneity. We developed LaGrACE, a novel method designed to estimate dysregulation of gene program utilizing omics data with clinical information. This approach facilitates grouping of samples exhibiting similar patterns of gene program dysregulation, thereby enhancing the discovery of underlying molecular mechanisms. 
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports: varhandle (>= 2.0.5), Seurat (>= 5.0.1), limma (>= 3.44.3),
+        glmnet (>= 4.0-2), caret (>= 6.0-86), cowplot (>= 1.1.0), gtools(>= 3.9.2),
+        linprog(>= 0.9-4), methods(>= 4.1.2), MASS(>= 7.3-55)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Depends: R (>= 3.4.4),  clustree (>= 0.4.3)
+NeedsCompilation: no
+Author: Minxue Jia [cre, aut],
+  Panayiotis Benos [aut]
+Maintainer: Minxue Jia <mij51@pitt.edu>
+Packaged: 2021-01-12 08:31:04 UTC; mjia
