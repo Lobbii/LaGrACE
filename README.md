@@ -6,7 +6,15 @@ LaGrACE: Estimating gene program dysregulation using latent gene regulatory netw
 ## About LaGrACE
 LaGrACE is a novel approach designed to estimate regulatory network-based pseudo control outcome to characterize gene program dysregulation for samples within treatment (or disease) group. This method enables grouping of samples with similar patterns of gene program dysregulation, thereby facilitating discovery of underlying molecular mechanisms induced by treatment or disease.
 
-Whenever using LaGrACE, please cite: [Manuscript](https://www.biorxiv.org/content/10.1101/2024.04.29.591756v1) 
+
+## Reference
+If you use `LaGrACE` in your work, please cite
+
+> **LaGrACE: Estimating gene program dysregulation with latent regulatory networks**
+>
+> Minxue Jia, Haiyi Mao, Mengli Zhou, Yu-Chih Chen, Panayiotis(Takis) Benos
+>
+> _Molecular Systems Biology_ . doi: [10.1038/s44320-025-00115-3](https://doi.org/10.1038/s44320-025-00115-3).
 
 
 
@@ -86,13 +94,6 @@ opt_PD<-S$Group.1[which.min(S$abs)] # PD value with smallest prediction error
 LaGrACE_deviation_opt_PD<-run_LaGrACE(input_feature, reference_samples = reference_index, fges_pd = opt_PD, out_dir="./Testing") 
 ```
 
-## Reference
-If you use `LaGrACE` in your work, please cite
 
-> **LaGrACE: Estimating gene program dysregulation with latent regulatory networks**
->
-> Minxue Jia, Haiyi Mao, Mengli Zhou, Yu-Chih Chen, Panayiotis(Takis) Benos
->
-> _Molecular Systems Biology_ . doi: [10.1038/s44320-025-00115-3](https://doi.org/10.1038/s44320-025-00115-3).
 
 
