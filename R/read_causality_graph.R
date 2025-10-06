@@ -1,57 +1,62 @@
 #' Load reference sample causal network
 #'
-#' this functions loads reference sample causal network (FGES) from TXT file
+#' Loads the FGES causal network from a TXT file with the expected format and
+#' returns edges, nodes, and adjacencies.
+#'
 #' @param file Path to TXT file containing the reference sample network
-#' @return A list containing edge, nodes and adjacency information of causal graph learned by FGES
+#' @return A list with `edges`, `nodes`, and `adjacencies`
 #' @export
 
-read_causality_graph<-function(file){
+read_causality_graph <- function(file) {
   if (!file.exists(file)) {
-    stop("Cannot find file!")
+    stop(sprintf("Cannot find file: %s", file))
   }
-  tmp <- readLines(file)
-  if (tmp[1] != "Graph Nodes:") {    stop("file does not contain a compatible graph.")}
+  tmp <- readLines(file, warn = FALSE)
+  if (length(tmp) < 4L) {
+    stop("Network file is too short to be valid.")
+  }
+  if (tmp[1] != "Graph Nodes:") {
+    stop("File does not contain a compatible graph: missing 'Graph Nodes:' header.")
+  }
 
-  if (grepl(";", tmp[2])){
-    split <- ";"
-  }  else {split <- ","}
-
-  nodes <- unlist(strsplit(tmp[2], split = split))
+  split <- if (grepl(";", tmp[2], fixed = TRUE)) ";" else ","
+  nodes <- unlist(strsplit(tmp[2], split = split, fixed = TRUE))
   nodes <- sort(nodes)
-  if (tmp[4] != "Graph Edges:") {stop("file does not contain a compatible graph.")}
+  if (tmp[4] != "Graph Edges:") {
+    stop("File does not contain a compatible graph: missing 'Graph Edges:' header.")
+  }
 
   tmp <- tmp[-(1:4)]
-  edges <- c()
+  edges <- character(0)
   line <- tmp[1]
-  while (!is.na(line) && line != "") {
+  while (!is.na(line) && nzchar(line)) {
     line <- sub("[0-9]+\\. ", "", line)
     edge <- unlist(strsplit(line, split = " "))
-    if (is.na(sum(match(c(edge[1], edge[3]), nodes)))) {
-      print(line)
-      stop("file contains a malformed causality graph.")
+    if (length(edge) < 3L || any(is.na(match(c(edge[1], edge[3]), nodes)))) {
+      stop(sprintf("File contains malformed graph line: '%s'", line))
     }
     edges <- c(edges, c(edge[1], edge[3], edge[2]))
     tmp <- tmp[-1]
     line <- tmp[1]
   }
-  edges<-matrix(edges, ncol=3, byrow=TRUE)
+  edges <- matrix(edges, ncol = 3, byrow = TRUE)
 
   adjacencies <- lapply(nodes, function(node) {
-    neighborhood <- c()
-    # loop over the edges
-    for (i in 1:nrow(edges)) {
+    neighborhood <- character(0)
+    for (i in seq_len(nrow(edges))) {
       # if a node is in an edge, find its partner (neighbor)
-      if( node %in% edges[i, 1:2]) {
-        neighbor <- edges[i, c(node != edges[i, 1:2], F)]
-        if (!(neighbor %in% neighborhood))
+      if (node %in% edges[i, 1:2]) {
+        neighbor <- edges[i, c(node != edges[i, 1:2], FALSE)]
+        if (!(neighbor %in% neighborhood)) {
           neighborhood <- c(neighborhood, neighbor)
+        }
       }
     }
-    return(neighborhood)
+    neighborhood
   })
   names(adjacencies) <- nodes
 
-  return(list('edges'=edges,'nodes'=nodes,'adjacencies'=adjacencies))
+  return(list(edges = edges, nodes = nodes, adjacencies = adjacencies))
 }
 
 
