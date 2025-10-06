@@ -1,46 +1,88 @@
 #' Learn FGES network and calculate LaGrACE divergence score
 #'
-#' This function returns LaGrACE divergence score
-#' @param input_data Dataframe containing data for all samples (rows) and variables (columns)
-#' @param reference_samples Logical vector indicating which samples belong to
-#' reference group (TRUE) and which do not (FALSE)
-#' @param fges_pd Penalty discount value for learning FGES causal network
-#' @param maxCat Maximum number of categories for a variable to be treated as discrete
-#' @param out_dir Path to directory to which all output files should be written
-#' @return Path to file containing the output from FGES
+#' This function orchestrates the LaGrACE workflow: it derives a reference-only
+#' dataset, runs FGES to learn a causal network on the reference samples, and then
+#' computes LaGrACE features for all samples using that network.
+#'
+#' @param input_data Data frame or matrix with samples in rows and variables in columns
+#' @param reference_samples Logical vector indicating which samples belong to the
+#'   reference group (TRUE) vs non-reference (FALSE). Must be length `nrow(input_data)`.
+#' @param fges_pd Numeric scalar penalty discount for FGES causal network learning
+#' @param maxCat Integer scalar: maximum number of categories for a variable to be
+#'   treated as discrete when generating binary indicators
+#' @param out_dir Path to a directory where all intermediate and output files are written
+#' @return A list of LaGrACE features and related metadata (see `calculate_features`)
 #' @export
 
 
-run_LaGrACE <- function(input_data, reference_samples, fges_pd = 1,maxCat=5, out_dir) {
+run_LaGrACE <- function(input_data, reference_samples, fges_pd = 1, maxCat = 5, out_dir) {
 
-  names(input_data) <- make.names(names(input_data),unique=TRUE)
-
-  if (substr(out_dir, nchar(out_dir), nchar(out_dir))=="/"){
-    out_dir <- substr(out_dir, 1, nchar(out_dir)-1)
+  # Basic input validation for clearer errors
+  if (!is.data.frame(input_data) && !is.matrix(input_data)) {
+    stop("input_data must be a data.frame or matrix")
+  }
+  if (!is.logical(reference_samples) || length(reference_samples) != nrow(input_data)) {
+    stop("reference_samples must be a logical vector with length equal to nrow(input_data)")
+  }
+  if (!is.numeric(fges_pd) || length(fges_pd) != 1L) {
+    stop("fges_pd must be a numeric scalar")
+  }
+  if (!is.numeric(maxCat) || length(maxCat) != 1L || maxCat < 2) {
+    stop("maxCat must be a numeric scalar >= 2")
+  }
+  if (!is.character(out_dir) || length(out_dir) != 1L) {
+    stop("out_dir must be a single path string")
   }
 
-  dir.create(out_dir, showWarnings = FALSE)
+  # Ensure unique, syntactically valid column names
+  colnames(input_data) <- make.names(colnames(input_data), unique = TRUE)
 
-  # create dataset that only contains reference samples
-  ref_data <- input_data[reference_samples, ]
+  # Normalize and create output directories
+  out_dir <- sub("/+\$", "", out_dir)  # defensive: strip trailing slashes
+  out_dir <- sub("/*$", "", out_dir)    # ensure no trailing slash
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
-  # write out new data file with row names
-  write.table(input_data, paste0(out_dir,'/input_data.all_samples.w_rownames.txt'), quote = F, sep = '\t', row.names = T, col.names = T)
+  # Derive reference-only dataset
+  ref_data <- input_data[reference_samples, , drop = FALSE]
 
-  # write out reference data file with row names
-  write.table(ref_data, paste0(out_dir,'/input_data.reference_samples.w_rownames.txt'), quote = F, sep = '\t', row.names = T, col.names = T)
+  # Write inputs with and without row names for downstream steps
+  write.table(
+    input_data,
+    file = file.path(out_dir, "input_data.all_samples.w_rownames.txt"),
+    quote = FALSE, sep = "\t", row.names = TRUE, col.names = TRUE
+  )
 
+  write.table(
+    ref_data,
+    file = file.path(out_dir, "input_data.reference_samples.w_rownames.txt"),
+    quote = FALSE, sep = "\t", row.names = TRUE, col.names = TRUE
+  )
 
-  dir.create(paste0(out_dir,'/FGES'), showWarnings = FALSE)
-  # write out reference data file without row names for fges
-  fges_in_file_path <- paste0(out_dir,'/FGES/input_data.reference_samples.wout_rownames.txt')
-  write.table(ref_data, fges_in_file_path, quote = F, sep = '\t', row.names = F, col.names = T)
+  fges_dir <- file.path(out_dir, "FGES")
+  dir.create(fges_dir, showWarnings = FALSE, recursive = TRUE)
 
-  # Run FGES
-  fges_out_net_file <- learn_fges_network(fges_in_file_path, fges_pd,maxCat =maxCat, paste0(out_dir,'/FGES'))
+  # Write reference data without row names for FGES
+  fges_in_file_path <- file.path(fges_dir, "input_data.reference_samples.wout_rownames.txt")
+  write.table(
+    ref_data,
+    file = fges_in_file_path,
+    quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE
+  )
 
-  # calculate LaGrACE features from FGES network output
-  lagrace_features <- calculate_features(fges_out_net_file, input_data, reference_samples = reference_samples,maxCat=maxCat)
+  # Run FGES and compute LaGrACE features
+  fges_out_net_file <- learn_fges_network(
+    fges_in_file_path = fges_in_file_path,
+    fges_pd = fges_pd,
+    maxCat = maxCat,
+    out_dir = fges_dir
+  )
 
-    return(lagrace_features)
+  lagrace_features <- calculate_features(
+    net_file = fges_out_net_file,
+    input_data = input_data,
+    reference_samples = reference_samples,
+    maxCat = maxCat
+  )
+
+  return(lagrace_features)
 }
